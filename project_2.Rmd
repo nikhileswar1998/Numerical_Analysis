@@ -1,0 +1,208 @@
+---
+title: "Project2"
+author: "Nikhileswar mada"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,warning=FALSE)
+```
+
+# Question 1
+
+implementing the pre conditioner function using forward and backward substitution
+
+```{r}
+preconditioner<-function(A,r){
+  D<-diag(diag(A))
+  L<-lower.tri(A)
+  U<-upper.tri(A)
+  c<-forward(D+L,r)
+  z<-backward(solve(D) %*% (D+U),c)
+  return(z)
+}
+
+forward<-function(L,b){
+  n<-nrow(L)
+  x<-rep(0,n)
+  for (i in 1:n){
+    
+    x[i]<-(b[i]-L[i,1:(i-1)] %*% x[1:(i-1)])/L[i,i]
+  }
+  return(x)
+}
+
+backward<-function(U,c){
+  n<-nrow(U)
+  x<-rep(0,n)
+  for (i in n:1){
+    if (i==n){
+      x[i]<-(c[i]/U[i,i])
+    }
+    else{
+    x[i]<-(c[i]-U[i,(i+1):n] %*%x[(i+1):n])/U[i,i]
+    }
+  }
+  return(x)
+}
+
+```
+
+sample to check whether the functions are working as intended
+
+We need a to be symmetric and positive definite
+```{r}
+n <- 10
+A <- matrix(rnorm(n^2), n, n)
+A <- A %*% t(A) 
+r <- rnorm(n)
+#LU<-lu(A)
+z<-solve(A,r)
+x<-preconditioner(A,r)
+#elu<-expand(LU)
+#L<-elu$L
+#P<-elu$P
+#U<-elu$U
+#y<-solve(L,solve(P)%*% r)
+#x<-solve(U,y)
+x
+z
+```
+
+
+We found the solutions are equal.
+
+\newpage
+
+# Question 2
+
+
+Reading A using read table.
+
+```{r}
+A<-read.table('A.dat',sep=',')
+A<-as.matrix(A)
+```
+
+```{r}
+n<-100
+xt<-rep(1,nrow(A))
+b<-A%*%xt
+tol<-1e-10
+residual_without<-rep(0,n)
+residual_with<-rep(0,n)
+x0<-rep(3,nrow(A))
+r<-b-A%*%x0
+x<-x0
+error_with_preconditioner<-rep(0,n)
+error_without_preconditioner<-rep(0,n)
+for (i in 1:n){
+  z<-r
+  #z_with<-preconditioner(A,r)
+  alpha<-(t(z)%*%r)/(t(z)%*%A%*%z)
+  residual_without[i]<-sqrt(sum((b-A%*%x)^2))/sqrt(sum(b^2))
+  if(residual_without[i]<tol){
+    break
+  }
+  r<-r- as.numeric(alpha)*A%*%z
+  x<-x+as.numeric(alpha)*z
+}
+
+
+r<-b-A%*%x0
+x<-x0
+for (j in 1:n){
+  z<-preconditioner(A,r)
+  alpha<-(t(z)%*%r)/(t(z)%*%A%*%z)
+  residual_with[j]<-sqrt(sum((b-A%*%x)^2))/sqrt(sum(b^2))
+  if(residual_with[j]<tol){
+    break
+  }
+  r<-r- as.numeric(alpha)*A%*%z
+  x<-x+as.numeric(alpha)*z  
+}
+# Saving the residuals and the iterations into RData file.
+save(residual_with,file='question2.RData')
+save(residual_without,file='question2.RData')
+plot(exp(residual_without[1:100]),type='l',col='red',ylab='Residual',xlab='Iterations')
+lines(exp(residual_with),col='green')
+legend(x='topright',legend=c('without preconditioner','with preconditioner'),col=c('green','red'),lwd=2)
+```
+
+Saving the Residuals of both with and without the use of preconditioner into question.RData file.
+
+\newpage
+
+# Question 3
+
+We repeat the same thing here as the question 2
+
+
+```{r}
+n<-1000
+xt<-rep(1,nrow(A))
+b<-A%*%xt
+tol<-1e-10
+residual_without<-rep(0,n)
+x0<-rep(3,nrow(A))
+r<-b-A%*%x0
+x<-x0
+z=r
+p=z
+for (i in 1:n){
+  
+  #z_with<-preconditioner(A,r)
+  alpha<-(t(p)%*%r)/(t(p)%*%A%*%z)
+  residual_without[i]<-sqrt(sum((b-A%*%x)^2))/sqrt(sum(b^2))
+  if(residual_without[i]<tol){
+    break
+  }
+  r<-r-as.numeric(alpha)*A%*%p
+  x<-x+as.numeric(alpha)*p
+  z<-r
+  beta<-(t(p)%*%A%*%z)/(t(p)%*%A%*%p)
+  p<-z-as.numeric(beta)*p
+}
+plot(residual_without,type='l')
+
+```
+
+The loop broke after 87 iterations without preconditioning.
+
+```{r}
+n<-100
+r<-b-A%*%x0
+x<-x0
+z=preconditioner(A,r)
+p=z
+residual_with<-rep(0,n)
+for (i in 1:n){
+  #z_with<-preconditioner(A,r)
+  alpha<-(t(p)%*%r)/(t(p)%*%A%*%z)
+  residual_with[i]<-sqrt(sum((b-A%*%x)^2))/sqrt(sum(b^2))
+  if(residual_with[i]<tol){
+    break
+  }
+  r<-r-as.numeric(alpha)*A%*%p
+  x<-x+as.numeric(alpha)*p
+  z<-preconditioner(A,r)
+  beta<-(t(p)%*%A%*%z)/(t(p)%*%A%*%p)
+  p<-z-as.numeric(beta)*p
+}
+save(residual_with,file='question3.RData')
+save(residual_without,file='question3.RData')
+plot(exp(residual_with),type='l',col='green',ylab='residual',xlab='Iterations')
+lines(exp(residual_without),col='red')
+legend(x='topright',legend=c('without preconditioner','with preconditioner'),col=c('green','red'),lwd=2)
+```
+
+
+We can see in both the cases that using preconditioner quickly dies down the loss 
+
+
+
+
+
+
+

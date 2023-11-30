@@ -1,0 +1,182 @@
+---
+title: "Project_1"
+author: "Nikhileswar mada"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Question 1
+
+*Implement the Bisection method. Design a test problem with a known root x0. Apply the
+Bisection method to the test problem with a tolerance $\epsilon=10^{-6}$.Generate a table to report the iteration number n.The value of $n^{th}$ approximation is $x_n$,the function value $f(x_n)$,the error $e_n=|x_n-x_0|$, and the ratio $\frac{e_n}{e_{n-1}}$.*
+
+Ans:
+We are choosing $f(x)=x^3-3x+1$ as our equation and [a,b]=[1,2]
+as f(a)<0 and f(b)>0
+```{r}
+fun<-function(x) x^3 - 3*x + 1
+a<-1
+b<-2
+tol<-10^-6
+n<-0
+x_n<-(a+b)/2
+e_n<-abs(x_n-1.87938524)
+e_frac<-0
+answer<-data.frame(n, x_n, fun(x_n), e_n, e_frac)
+while(abs(fun(x_n)) > tol){
+  if (fun(x_n)==0){
+    break
+  }
+  else if(fun(a)*fun(x_n) < 0){
+    b <- x_n
+  } else {
+    a <- x_n
+  }
+  n <- n + 1
+  x_n_prev <- x_n
+  x_n <- (a+b)/2
+  e_n_prev <- e_n
+  e_n <- abs(x_n - 1.87938524)
+  e_frac <- e_n/e_n_prev
+  answer <- rbind(answer, c(n, x_n, fun(x_n), e_n, e_frac))
+}
+print(answer)
+```
+Above shows the table for the required factors using bisection method after 20 iterations we have achieved the function value at x=1.532089 be less than tolerance of $10^{-6}$.
+
+\newpage
+
+# Question 2
+
+Known root of $x^3-6=0$ between 1 and 2 is obtained from internet in order to calculate the error $|x_n-x_0|$ which is $x_0=1.8171205928321397$
+Using the bisection first to determine the initial guess for Newton's method.
+f(1)<0 and f(2)>0.So,our initial guess for [a,b]=[1,2]
+
+```{r}
+fun<-function(x) x^3 - 6
+a<-1
+b<-2
+x_n<-(a+b)/2
+tol_b<-10^-3
+while(abs(fun(x_n))>tol_b){
+  if(fun(x_n)==0){
+    break
+  }
+  else if(fun(a)*fun(x_n) < 0){
+    b <- x_n
+  } else {
+    a <- x_n
+  }
+  x_n <- (a+b)/2
+}
+
+x_newton<-x_n
+fun_dev<-function(x) 3*x^2
+tol_n<-10^-10
+n<-0
+x_newton_prev<-Inf
+error<-abs(x_newton-1.8171205928321397)
+practical_error_estimator<-Inf
+answer<-data.frame(n,x_newton,error,practical_error_estimator)
+while(abs(fun(x_newton))>tol_n){
+  x_newton_prev<-x_newton
+  x_newton<-x_newton-fun(x_newton)/fun_dev(x_newton)
+  n<-n+1
+  error<-abs(x_newton-1.8171205928321397)
+  practical_error_estimator<-abs(x_newton-x_newton_prev)/abs(x_newton_prev)
+  answer<-rbind(answer,c(n,x_newton,error,practical_error_estimator))
+}
+print(answer)
+```
+Above shows the table for the required factors using newton's method after 3 iterations we have achieved the function value at x=1.817121 be less than tolerance of $10^{-10}$.
+
+\newpage
+
+# Question 3
+
+given $f(x)=0$ (i.e) $3x-sin(x)=0$ We know that fixed point problem
+
+$$x=g(x) \implies f(x)=0$$
+$$x=1/3(sin(x))$$
+$$g(x)=1/3(sin(x))$$
+
+
+
+then $$x_{n+1}=g(x_n)$$
+
+
+
+We know that the $g^{'}(x)$ is continuous and clearly 0 is a fixed point of g(x) and $|g^{'}(r)<1|$,this implies that the point iteration is locally convergent.So,we can the point iteration method.
+let's start x=0.5 radians.
+```{r}
+fun<-function(x)1/3*(sin(x))
+x_n<-0.5
+tol<-10^-6
+n<-0
+x_n_prev<-Inf
+practical_error_estimator<-Inf
+error<-abs(0.5-0)
+answer<-data.frame(n,x_n,error,practical_error_estimator)
+while(abs(fun(x_n)-x_n)>tol){
+  x_n_prev<-x_n
+  x_n<-fun(x_n)
+  n<-n+1
+  error<-abs(x_n-0)
+  practical_error_estimator<-abs(x_n-x_n_prev)/abs(x_n_prev)
+  answer<-rbind(answer,c(n,x_n,error,practical_error_estimator))
+}
+
+print(answer)
+```
+
+Above shows the table for the required factors using convergent fixed point iteration after 12 iterations we have achieved the function value at x=$8.97*10^{-7}$ be less than tolerance of $10^{-6}$.
+
+\newpage
+
+# Question 4
+
+since we don't know the [a,b] intutively let's try and find the bounds using substitution
+```{r}
+
+fun<-function(x) (x-1)*(x-2)*(x-3)*(x-4)*(x-5)*(x-6)*(x-7)-(10^-7)*x^7
+a<-6.5
+b<-7.5
+print(fun(a))
+print(fun(b))
+```
+
+As we can see that $f(a).f(b)<0$.So,our guess of [a,b]=[6.5,7.5] can be used
+
+```{r}
+tol<-10^-8
+n<-0
+x_n<-(a+b)/2
+e_n<-abs(x_n-7)
+e_frac<-0
+answer<-data.frame(n, x_n, fun(x_n), e_n, e_frac)
+while(abs(fun(x_n)) > tol){
+  if (fun(x_n)==0){
+    break
+  }
+  else if(fun(a)*fun(x_n) < 0){
+    b <- x_n
+  } else {
+    a <- x_n
+  }
+  n <- n + 1
+  x_n_prev <- x_n
+  x_n <- (a+b)/2
+  e_n_prev <- e_n
+  e_n <- abs(x_n - 7)
+  e_frac <- e_n/e_n_prev
+  answer <- rbind(answer, c(n, x_n, fun(x_n), e_n, e_frac))
+}
+print(answer)
+```
+
+After 35 iterations the value of function is less than tolerance of $10^{-8}$ at x=7.000114.
+

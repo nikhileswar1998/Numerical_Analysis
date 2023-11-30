@@ -1,0 +1,202 @@
+---
+title: "Project 3"
+author: "Nikhileswar mada"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Given the function
+
+$$f(x)=100(x_1-x_2)^2+(x_2-1)^2$$
+
+This has a unique minimizer of $x^*=[11]$.we implement the steepest descent method (SD) and the BFGS method for finding a local minimizer of a multivariate function.
+
+
+# 1
+
+Given a $x^k$ and the search direction $p^k$. We are trying to find the ideal step size $\alpha^k$ where $\phi(\alpha)=f(x^k+\alpha_kp^k)$.
+
+let's try substistuting this in $f(x)$ and differentiate with respect to $\alpha$ and equating it zero will lead to obtaining the $\alpha^k$.
+
+$$f(x^k+\alpha^kp^k)=100(x^k_1+\alpha_kp^k_1-x^k_2+\alpha_kp^k_2)^2+(x^k_2+\alpha_kp^k_2-1)^2$$
+
+
+$$\frac{df(x^k+\alpha^kp^k)}{d\alpha_k}=0$$
+Solving this we get 
+
+$$\alpha_k=\frac{(1-x^k_2)p^k_2+100(p^k_2-p^k_1)(x^k_1-x^k_2)}{100(p^k_2-p^k_1)^2+(p^k_2)^2}$$
+
+```{r}
+f <- function(x) {
+  return(100 * (x[1] - x[2])^2 + (x[2] - 1)^2)
+}
+```
+
+The explicit function of $\alpha_k$ is given here.
+
+```{r}
+alpha <- function(x, p) {
+  num <- 100*(p[2]-p[1]) * (x[1]-x[2]) +(1-x[2])*p[2] 
+  den <- 100*(p[2]-p[1])^2+(p[2])^2
+  return(num / den)
+}
+```
+
+\newpage
+
+# 2.
+
+We have creating a gradient function for f(x) to implement the backtracking algorithm.
+
+We know that 
+
+$$\alpha_k+1=\sigma*\alpha_k$$
+
+```{r}
+diff_f<-function(x) {
+ return( c(200 * (x[1] - x[2]), -200 * (x[1] - x[2]) + 2 * (x[2] - 1)))
+}
+
+```
+
+We are iterating over the $f(x^k+\alpha^kp^k)$ using backtracking with parameter $\rho=0.001$
+
+```{r}
+backtracking <- function(x, p, rho = 0.001, sigma = 0.9) {
+  alpha = 1
+  while (f(x) + rho * alpha * t(diff_f(x)) %*% p<f(x + alpha * p)) {
+    alpha = sigma * alpha
+  }
+  return (x+alpha*p)
+}
+```
+
+
+The backtracking function is applied to the function f defined above and return the new value of x.
+
+\newpage
+
+# 3
+using steep descent method using backtracking
+
+```{r}
+
+steepest_descent <- function(x0) {
+  
+  x <- x0
+  iter <- 0
+  error <-  sqrt(2) 
+  tol<-10^-10
+  # writing the data into a file
+  file_conn <- file("project3_SD_data.csv", "w")
+  writeLines("iteration,error", file_conn)
+  count=0
+  while (error > tol) {
+    p <- -diff_f(x)
+    count=count+1
+    # Compute the step size using backtracking
+    x_kn <- backtracking(x, p)
+    
+    # Compute the error and write to file
+    error <- sqrt(sum((x_kn - c(1, 1))^2))
+    writeLines(paste(iter, error, sep=","), file_conn)
+    if (count%%100==0){
+      print(iter)
+      print(error)}
+    # Update x and iter
+    x <- x_kn
+    iter <- iter + 1
+  }
+  close(file_conn)
+  
+  return(x)
+}
+
+x0 <- c(0, 0)
+steepest_descent(x0)
+```
+
+```{r}
+# Read the error vs iteration data from file and plot it
+data <- read.csv("project3_SD_data.csv")
+plot(data$iteration, data$error, type="l", xlab="Iteration", ylab="Error")
+
+```
+
+Using the Steepest Descent we got the X to be [1 1] which is the actual solution this result is exact because the convergence of the least value of the programmable value is at the exact solution.
+
+\newpage
+
+# 4.
+
+Implementing the BFGS method 
+
+
+```{r}
+
+bfgs <- function(x0) {
+  
+  x <- x0
+  iter <- 0
+  B<-diag(2)
+  error <-  sqrt(2) 
+  tol<-10^-10
+  # writing the data into a file
+  file_conn <- file("project3_BFGS_data.csv", "w")
+  writeLines("iteration,error", file_conn)
+  count=0
+  while (sqrt(sum((diff_f(x))^2)) > tol) {
+    
+    p <- -B %*%diff_f(x)
+    # Compute the step size using backtracking
+    x_kn <- backtracking(x, p)
+    count=count+1
+    # Compute the error and write to file
+    error <- sqrt(sum((x_kn - c(1, 1))^2))
+    writeLines(paste(iter, error, sep=","), file_conn)
+    if(count%%20==0){
+      print(iter)
+      print(error)
+    }
+    # Update x and iter
+    res<-x_kn-x
+    y<-diff_f(x_kn)-diff_f(x)
+    rho_k<-as.numeric(1/(t(y)%*% res))
+    B <- (diag(2) - rho_k * res %*% t(y)) %*% B %*% (diag(2) - rho_k * y %*% t(res)) + rho_k * res %*% t(y)
+    x<-x_kn
+    iter <- iter + 1
+    
+  }
+  close(file_conn)
+  
+  return(x)
+}
+
+x0 <- c(0, 0)
+bfgs(x0)
+```
+
+```{r}
+# Read the error vs iteration data from file and plot it
+data_4 <- read.csv("project3_BFGS_data.csv")
+plot(data_4$iteration, data_4$error, type="l", xlab="Iteration", ylab="Error")
+```
+
+
+Using the BFGS  we got the X to be [1 1] which is the actual solution this result is exact because the convergence of the least value of the programmable value is at the exact solution.
+
+
+
+
+
+
+
+
+
+
+
